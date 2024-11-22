@@ -1,7 +1,11 @@
 from flask import Flask, request, jsonify, render_template
 import requests
 
+from flask_cors import CORS
+
 app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
+
 
 ACCESS_TOKEN = 'IGQWRQUGx1bDU3QmtlemtMOXNUYS1Ma3JBc1JPZAHR6UzFEZAVJrakYyVXVsYUVmNFVBV1BRSHhRWnBZAam01YW1pdXRZAYUg2QVNsZAVgwWjVDOVp6c2FzNWY5aFEyeEgtRjVKZAVNGUGpseGd6aXlBN1ZA2LW5RSVdLd0kZD'
 USER_ID = '607510761'
