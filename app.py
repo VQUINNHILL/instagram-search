@@ -4,7 +4,7 @@ import requests
 app = Flask(__name__)
 
 ACCESS_TOKEN = 'IGQWRQUGx1bDU3QmtlemtMOXNUYS1Ma3JBc1JPZAHR6UzFEZAVJrakYyVXVsYUVmNFVBV1BRSHhRWnBZAam01YW1pdXRZAYUg2QVNsZAVgwWjVDOVp6c2FzNWY5aFEyeEgtRjVKZAVNGUGpseGd6aXlBN1ZA2LW5RSVdLd0kZD'
-USER_ID = 'titanmotoring'
+USER_ID = '607510761'
 INSTAGRAM_API_URL = f'https://graph.instagram.com/{USER_ID}/media'
 
 
