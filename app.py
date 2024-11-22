@@ -93,3 +93,25 @@ def handle_500_error(e):
 @app.errorhandler(404)
 def handle_404_error(e):
     return jsonify({"error": "Endpoint not found"}), 404
+
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
+
+@app.route('/search', methods=['POST'])
+def search():
+    data = request.get_json()
+    keyword = data.get('keyword', '').lower()
+    sort_by = data.get('sort_by', 'relevance')
+
+    logging.debug(f"Received keyword: {keyword}")
+    logging.debug(f"Sort by: {sort_by}")
+
+    # Fetch posts and filter results
+    posts = fetch_all_posts()
+    logging.debug(f"Fetched posts: {posts}")
+
+    matching_posts = filter_and_sort_posts(posts, [keyword], sort_by)
+
+    logging.debug(f"Matching posts: {matching_posts}")
+    return jsonify(matching_posts)
