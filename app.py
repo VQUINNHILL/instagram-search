@@ -81,3 +81,11 @@ def search():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+@app.errorhandler(500)
+def handle_500_error(e):
+    return jsonify({"error": "Internal server error"}), 500
+
+@app.errorhandler(404)
+def handle_404_error(e):
+    return jsonify({"error": "Endpoint not found"}), 404
