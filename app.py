@@ -4,7 +4,7 @@ import requests
 from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+CORS(app, origins=["https://supreme-meme-7qp4794rq59f6x-5000.app.github.dev"])
 
 
 ACCESS_TOKEN = 'IGQWRQUGx1bDU3QmtlemtMOXNUYS1Ma3JBc1JPZAHR6UzFEZAVJrakYyVXVsYUVmNFVBV1BRSHhRWnBZAam01YW1pdXRZAYUg2QVNsZAVgwWjVDOVp6c2FzNWY5aFEyeEgtRjVKZAVNGUGpseGd6aXlBN1ZA2LW5RSVdLd0kZD'
