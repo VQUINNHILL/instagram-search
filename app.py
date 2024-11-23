@@ -8,13 +8,13 @@ CORS(app, origins=["https://supreme-meme-7qp4794rq59f6x-5000.app.github.dev"])
 
 
 ACCESS_TOKEN = 'IGQWRQUGx1bDU3QmtlemtMOXNUYS1Ma3JBc1JPZAHR6UzFEZAVJrakYyVXVsYUVmNFVBV1BRSHhRWnBZAam01YW1pdXRZAYUg2QVNsZAVgwWjVDOVp6c2FzNWY5aFEyeEgtRjVKZAVNGUGpseGd6aXlBN1ZA2LW5RSVdLd0kZD'
-USER_ID = '86991507568692492'
-INSTAGRAM_API_URL = f'https://graph.instagram.com/{USER_ID}/media'
+USER_ID = '17841400682839492'
+INSTAGRAM_API_URL = f'https://graph.instagram.com/v21.0/{USER_ID}/media?access_token={ACCESS_TOKEN}'
 
 
 def fetch_all_posts():
     """Fetch all posts from the Instagram API with pagination."""
-    url = f"https://graph.instagram.com/{USER_ID}/media"
+    url = f"https://graph.instagram.com/v21.0/{USER_ID}/media?access_token={ACCESS_TOKEN}"
     posts = []
 
     while url:
