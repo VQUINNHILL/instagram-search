@@ -21,7 +21,7 @@ def fetch_all_posts():
         response = requests.get(
             url,
             params={
-                'fields': 'id,caption,media_url,timestamp',
+                'fields': 'id',
                 'access_token': ACCESS_TOKEN,
             } if 'access_token' not in url else {}
         )
