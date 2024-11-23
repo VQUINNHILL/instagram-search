@@ -51,10 +51,7 @@ def fetch_all_posts():
                 },
                 timeout=10  # Set timeout to 10 seconds
             )
-            logging.debug(f"API URL: {response.url}")
-            logging.debug(f"API response status code: {response.status_code}")
-            logging.debug(f"API response body: {response.text}")  # Log full response for debugging
-            logging.debug(f"Response Body: {response.json()}")
+            logging.debug(f"API Response: {response.json()}")  # Log the full response
 
             if response.status_code != 200:
                 logging.error(f"Error fetching posts: {response.status_code} {response.text}")
@@ -72,12 +69,15 @@ def fetch_all_posts():
             logging.error(f"An error occurred: {e}")
             break
 
+    logging.debug(f"Fetched posts: {posts}")  # Log the complete post list
     return posts
 
 
 
 
+
 def filter_and_sort_posts(posts, keywords, sort_by):
+    logging.debug(f"Posts before filtering: {posts}")
     """Filter posts by keywords and sort by the given criteria."""
     keywords = [kw.lower() for kw in keywords]
 
@@ -85,21 +85,27 @@ def filter_and_sort_posts(posts, keywords, sort_by):
     filtered_posts = [
         {
             "caption": post.get("caption", ""),
-            "media_url": post.get("media_url"),
-            "timestamp": post.get("timestamp"),
+            "media_url": post.get("media_url", ""),
+            "timestamp": post.get("timestamp", ""),
+            "media_type": post.get("media_type", ""),  # Default to "UNKNOWN"
+            "children": post.get("children", {}),
             "relevance": sum(1 for kw in keywords if kw in post.get("caption", "").lower()),
         }
         for post in posts
         if post.get("caption") and any(kw in post.get("caption", "").lower() for kw in keywords)
     ]
 
+
     # Sort posts by relevance or timestamp
     if sort_by == "relevance":
         filtered_posts.sort(key=lambda x: x["relevance"], reverse=True)
     elif sort_by == "timestamp":
         filtered_posts.sort(key=lambda x: x["timestamp"], reverse=True)
+    logging.debug(f"Filtered posts: {filtered_posts}")
 
     return filtered_posts
+
+
 
 
 @app.route('/')
@@ -127,7 +133,7 @@ def search():
     # Filter and sort posts
     matching_posts = filter_and_sort_posts(posts, keywords, sort_by)
 
-    logging.debug(f"Matching posts: {matching_posts}")
+    logging.debug(f"Final matching posts sent to frontend: {matching_posts}")
     return jsonify(matching_posts)
 
 

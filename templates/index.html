@@ -126,6 +126,10 @@
     
                         // Fallback logic for media type
                         let mediaType = post.media_type || inferMediaType(post.media_url);
+                        if (!post.media_type) {
+                        console.warn(`Media type missing for post:`, post); // Add this log
+                        }
+                        
                         let mediaElement;
     
                         if (mediaType === 'IMAGE') {
