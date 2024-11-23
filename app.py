@@ -35,25 +35,34 @@ def fetch_with_retries(url, params, retries=3):
 
 
 def fetch_all_posts():
-    """Fetch all posts from the Instagram API with pagination."""
-    params = {
-        "fields": "id,caption,media_url,timestamp",
-        "access_token": ACCESS_TOKEN,
-        "limit": 25,
-    }
-    url = INSTAGRAM_API_URL
+    """Fetch the first 5 pages of posts from the Instagram API."""
+    url = f"https://graph.instagram.com/v21.0/{USER_ID}/media"
     posts = []
+    page_limit = 5  # Limit to first 5 pages
+    page_count = 0  # Counter to track pages
 
-    while url:
-        try:
-            data = fetch_with_retries(url, params)
-            posts.extend(data.get("data", []))
-            url = data.get("paging", {}).get("next")
-        except Exception as e:
-            logging.error(f"Error fetching posts: {e}")
+    while url and page_count < page_limit:
+        response = requests.get(
+            url,
+            params={
+                'fields': 'id,caption,media_url,timestamp',
+                'access_token': ACCESS_TOKEN,
+            }
+        )
+        logging.debug(f"API response status code: {response.status_code}")
+        logging.debug(f"API response body: {response.text}")  # Log full response for debugging
+
+        if response.status_code != 200:
+            logging.error(f"Error fetching posts: {response.status_code} {response.text}")
             break
 
+        data = response.json()
+        posts.extend(data.get('data', []))
+        url = data.get('paging', {}).get('next')  # Get next page URL
+        page_count += 1  # Increment page counter
+
     return posts
+
 
 
 def filter_and_sort_posts(posts, keywords, sort_by):
