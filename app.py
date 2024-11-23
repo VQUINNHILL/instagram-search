@@ -35,33 +35,43 @@ def fetch_with_retries(url, params, retries=3):
 
 
 def fetch_all_posts():
-    """Fetch the first 5 pages of posts from the Instagram API."""
+    """Fetch the first 5 pages of posts from the Instagram API with timeouts."""
     url = f"https://graph.instagram.com/v21.0/{USER_ID}/media"
     posts = []
-    page_limit = 5  # Limit to first 5 pages
-    page_count = 0  # Counter to track pages
+    page_limit = 5  # Limit to the first 5 pages
+    page_count = 0  # Counter for the number of pages fetched
 
     while url and page_count < page_limit:
-        response = requests.get(
-            url,
-            params={
-                'fields': 'id,caption,media_url,timestamp',
-                'access_token': ACCESS_TOKEN,
-            }
-        )
-        logging.debug(f"API response status code: {response.status_code}")
-        logging.debug(f"API response body: {response.text}")  # Log full response for debugging
+        try:
+            response = requests.get(
+                url,
+                params={
+                    'fields': 'id,caption,media_url,timestamp',
+                    'access_token': ACCESS_TOKEN,
+                },
+                timeout=10  # Set timeout to 10 seconds
+            )
+            logging.debug(f"API response status code: {response.status_code}")
+            logging.debug(f"API response body: {response.text}")  # Log full response for debugging
 
-        if response.status_code != 200:
-            logging.error(f"Error fetching posts: {response.status_code} {response.text}")
+            if response.status_code != 200:
+                logging.error(f"Error fetching posts: {response.status_code} {response.text}")
+                break
+
+            data = response.json()
+            posts.extend(data.get('data', []))
+            url = data.get('paging', {}).get('next')  # Get the next page URL
+            page_count += 1  # Increment page counter
+
+        except requests.exceptions.Timeout:
+            logging.error("Request timed out while fetching posts")
+            break
+        except requests.exceptions.RequestException as e:
+            logging.error(f"An error occurred: {e}")
             break
 
-        data = response.json()
-        posts.extend(data.get('data', []))
-        url = data.get('paging', {}).get('next')  # Get next page URL
-        page_count += 1  # Increment page counter
-
     return posts
+
 
 
 
