@@ -10,8 +10,8 @@ app = Flask(__name__)
 CORS(app, origins=["https://supreme-meme-7qp4794rq59f6x-5000.app.github.dev"])
 
 # Environment configuration
-ACCESS_TOKEN = os.getenv("ACCESS_TOKEN", "YOUR_DEFAULT_ACCESS_TOKEN")
-USER_ID = os.getenv("USER_ID", "YOUR_USER_ID")
+ACCESS_TOKEN = 'IGQWRPQ0VfaVFwYjNrbW9xUGhmb0hnbE4ySGU0X2JXdGtCTk1RaUdLc0xjNXpqb3UtTGNqSWZApU2NCQnVXLUFHNTItZADY0RTgtcHBuUjNYbElMaHp2eGdCM3ZAfQ0c4OExfTzdxVjFoOEUtWFA0VXBvejRBOGVzaTAZD'
+USER_ID = '17841400682839492'
 INSTAGRAM_API_URL = f"https://graph.instagram.com/v21.0/{USER_ID}/media"
 
 # Logging setup
@@ -46,13 +46,15 @@ def fetch_all_posts():
             response = requests.get(
                 url,
                 params={
-                    'fields': 'id,caption,media_url,timestamp',
+                    'fields': 'id,caption,media_url,timestamp,media_type,children{media_type,media_url}',
                     'access_token': ACCESS_TOKEN,
                 },
                 timeout=10  # Set timeout to 10 seconds
             )
+            logging.debug(f"API URL: {response.url}")
             logging.debug(f"API response status code: {response.status_code}")
             logging.debug(f"API response body: {response.text}")  # Log full response for debugging
+            logging.debug(f"Response Body: {response.json()}")
 
             if response.status_code != 200:
                 logging.error(f"Error fetching posts: {response.status_code} {response.text}")
@@ -100,9 +102,14 @@ def filter_and_sort_posts(posts, keywords, sort_by):
     return filtered_posts
 
 
-@app.route("/")
+@app.route('/')
 def index():
-    return render_template("index.html")
+    # Fetch posts to display in the grid
+    posts = fetch_all_posts()
+    # Limit to the most recent 20 posts for performance
+    posts = posts[:20]
+    return render_template('index.html', posts=posts)
+
 
 
 @app.route("/search", methods=["POST"])

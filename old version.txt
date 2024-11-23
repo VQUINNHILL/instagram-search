@@ -101,3 +101,61 @@ def handle_500_error(e):
 def handle_404_error(e):
     return jsonify({"error": "Endpoint not found"}), 404
 
+
+
+
+
+
+
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instagram Caption Search</title>
+</head>
+<body>
+    <h1>Search Instagram Captions</h1>
+    <form id="searchForm">
+        <input type="text" id="keyword" placeholder="Enter keyword" required>
+        <select id="sortBy">
+           <option value="relevance">Sort by Relevance</option>
+           <option value="timestamp">Sort by Timestamp</option>
+        </select>
+        <button type="submit">Search</button>
+    </form>
+    <div id="results"></div>
+
+<script>
+    document.getElementById('searchForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const keyword = document.getElementById('keyword').value;
+        const sortBy = document.getElementById('sortBy').value;
+
+        const response = await fetch('https://instagram-search-production.up.railway.app/search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ keyword, sort_by: sortBy }),
+        });
+
+        const results = await response.json();
+        const resultsDiv = document.getElementById('results');
+        resultsDiv.innerHTML = '';
+
+        if (results.length > 0) {
+            results.forEach(post => {
+                const div = document.createElement('div');
+                div.innerHTML = `<p>${post.caption}</p><img src="${post.media_url}" alt="Post Image" width="200">`;
+                resultsDiv.appendChild(div);
+            });
+        } else {
+            resultsDiv.innerHTML = '<p>No matching posts found.</p>';
+        }
+    });
+</script>
+
+</body>
+</html>
