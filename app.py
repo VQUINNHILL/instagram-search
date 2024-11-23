@@ -14,18 +14,22 @@ INSTAGRAM_API_URL = f'https://graph.instagram.com/{USER_ID}/media'
 
 def fetch_all_posts():
     """Fetch all posts from the Instagram API with pagination."""
-    url = INSTAGRAM_API_URL
+    url = f"https://graph.instagram.com/{USER_ID}/media"
     posts = []
 
     while url:
         response = requests.get(
             url,
             params={
-                'fields': 'id',
+                'fields': 'id,caption,media_url,timestamp',
                 'access_token': ACCESS_TOKEN,
-            } if 'access_token' not in url else {}
+            }
         )
+        logging.debug(f"API response status code: {response.status_code}")
+        logging.debug(f"API response body: {response.text}")  # Log full response for debugging
+
         if response.status_code != 200:
+            logging.error(f"Error fetching posts: {response.status_code} {response.text}")
             break
 
         data = response.json()
@@ -33,7 +37,6 @@ def fetch_all_posts():
         url = data.get('paging', {}).get('next')  # Next page URL
 
     return posts
-
 
 def filter_and_sort_posts(posts, keywords, sort_by):
     """Filter posts by keywords and sort by the given criteria."""
