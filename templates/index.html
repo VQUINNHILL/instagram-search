@@ -11,10 +11,12 @@
             padding: 0;
             background-color: #f5f5f5;
         }
+
         h1 {
             text-align: center;
             margin: 20px 0;
         }
+
         #searchForm {
             display: flex;
             justify-content: center;
@@ -22,19 +24,14 @@
             gap: 10px;
             padding: 20px;
         }
-        #keyword {
-            width: 40%;
+
+        #keyword, #sortBy {
             padding: 10px;
             font-size: 16px;
             border: 1px solid #ddd;
             border-radius: 4px;
         }
-        #sortBy {
-            padding: 10px;
-            font-size: 16px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
+
         button {
             padding: 10px 20px;
             font-size: 16px;
@@ -44,38 +41,91 @@
             cursor: pointer;
             border-radius: 4px;
         }
+
         button:hover {
             background: #005bb5;
         }
+
         #results {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 20px;
             padding: 20px;
             margin: 0 auto;
             max-width: 1200px;
         }
+
         .grid-item {
             background: white;
             border: 1px solid #ddd;
             border-radius: 8px;
             overflow: hidden;
-            text-align: center;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            width: 300px; /* Specify post width */
+            height: 400px; /* Specify post height */
         }
-        .grid-item img, .grid-item video {
+
+        .media-container {
             width: 100%;
-            height: 200px;
-            object-fit: cover;
+            height: 75%; /* Media takes 75% of the post height */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f0f0f0; /* Placeholder background */
         }
+
+        .media-container img, .media-container video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* Force media to fit container */
+        }
+
         .grid-item p {
-            margin: 0;
-            padding: 8px;
+            margin: 10px;
+            padding: 0 10px;
             font-size: 14px;
             color: #333;
+            text-align: center;
+            height: 25%; /* Caption takes 25% of the post height */
+            overflow: hidden; /* Prevent long captions from overflowing */
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 3; /* Show up to 3 lines of text */
+            -webkit-box-orient: vertical;
         }
+
         .grid-item:hover {
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .grid-item a {
+          font-size: 14px;
+           color: #0073e6;
+            text-decoration: none;
+            text-align: center;
+            display: block;
+            margin: 10px 0;
+        }
+
+        .grid-item a:hover {
+         color: #005bb5;
+            text-decoration: underline;
+        }
+
+        .carousel {
+            display: flex;
+            overflow-x: auto;
+            gap: 10px;
+            padding: 10px;
+        }
+
+        .carousel img, .carousel video {
+            min-width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
     </style>
 </head>
@@ -92,77 +142,80 @@
     <div id="results"></div>
 
     <script>
-        document.getElementById('searchForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const keyword = document.getElementById('keyword').value;
-            const sortBy = document.getElementById('sortBy').value;
-    
-            try {
-                const response = await fetch('https://instagram-search-production.up.railway.app/search', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ keyword, sort_by: sortBy }),
-                });
-    
-                if (!response.ok) {
-                    console.error(`API Error: ${response.status}`);
-                    throw new Error('Failed to fetch posts');
-                }
-    
-                const results = await response.json();
-                const resultsDiv = document.getElementById('results');
-                resultsDiv.innerHTML = '';
-    
-                if (results.length > 0) {
-                    results.forEach(post => {
-                        const div = document.createElement('div');
-                        div.style.border = '1px solid #ddd';
-                        div.style.padding = '10px';
-                        div.style.margin = '10px';
-                        div.style.width = '300px';
-    
-                        // Debugging: Log full post object
-                        console.log('Post Data:', post);
-    
-                        // Fallback logic for media type
-                        let mediaType = post.media_type || inferMediaType(post.media_url);
-                        if (!post.media_type) {
-                        console.warn(`Media type missing for post:`, post); // Add this log
-                        }
-                        
-                        let mediaElement;
-    
-                        if (mediaType === 'IMAGE') {
-                            mediaElement = document.createElement('img');
-                            mediaElement.src = post.media_url;
-                            mediaElement.alt = 'Post Image';
-                            mediaElement.style.width = '100%';
-                        } else if (mediaType === 'CAROUSEL_ALBUM') {
-                            mediaElement = createCarousel(post.children?.data || []);
-                        } else if (mediaType === 'VIDEO') {
-                            mediaElement = document.createElement('video');
-                            mediaElement.src = post.media_url;
-                            mediaElement.controls = true;
-                            mediaElement.style.width = '100%';
-                        } else {
-                            mediaElement = document.createElement('p');
-                            mediaElement.textContent = 'Unknown media type or unsupported format.';
-                        }
-    
-                        div.innerHTML = `<p>${post.caption}</p>`;
-                        div.appendChild(mediaElement);
-                        resultsDiv.appendChild(div);
-                    });
-                } else {
-                    resultsDiv.innerHTML = '<p>No matching posts found.</p>';
-                }
-            } catch (error) {
-                console.error('Error fetching or rendering posts:', error);
-                const resultsDiv = document.getElementById('results');
-                resultsDiv.innerHTML = '<p>Failed to load posts. Please try again later.</p>';
-            }
+document.getElementById('searchForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const keyword = document.getElementById('keyword').value;
+    const sortBy = document.getElementById('sortBy').value;
+
+    try {
+        const response = await fetch('https://instagram-search-production.up.railway.app/search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ keyword, sort_by: sortBy }),
         });
-    
+
+        if (!response.ok) {
+            console.error(`API Error: ${response.status}`);
+            throw new Error('Failed to fetch posts');
+        }
+
+        const results = await response.json();
+        const resultsDiv = document.getElementById('results');
+        resultsDiv.innerHTML = '';
+
+        if (results.length > 0) {
+            results.forEach(post => {
+                const div = document.createElement('div');
+                div.className = 'grid-item';
+
+                // Create media container
+                const mediaContainer = document.createElement('div');
+                mediaContainer.className = 'media-container';
+
+                const mediaType = post.media_type || inferMediaType(post.media_url);
+
+                if (mediaType === 'IMAGE') {
+                    const img = document.createElement('img');
+                    img.src = post.media_url;
+                    img.alt = 'Post Image';
+                    mediaContainer.appendChild(img);
+                } else if (mediaType === 'CAROUSEL_ALBUM') {
+                    mediaContainer.appendChild(createCarousel(post.children?.data || []));
+                } else if (mediaType === 'VIDEO') {
+                    const video = document.createElement('video');
+                    video.src = post.media_url;
+                    video.controls = true;
+                    mediaContainer.appendChild(video);
+                } else {
+                    const unknown = document.createElement('p');
+                    unknown.textContent = 'Unknown media type';
+                    mediaContainer.appendChild(unknown);
+                }
+
+                // Add caption as a clickable link
+                const caption = document.createElement('a');
+                caption.href = `https://www.instagram.com/p/${post.id}`; // Construct Instagram URL
+                caption.target = '_blank'; // Open in a new tab
+                caption.textContent = post.caption || 'No caption available';
+                caption.style.textDecoration = 'none'; // Optional styling
+                caption.style.color = '#0073e6'; // Optional styling for link color
+
+                // Append to grid item
+                div.appendChild(mediaContainer);
+                div.appendChild(caption);
+                resultsDiv.appendChild(div);
+            });
+        } else {
+            resultsDiv.innerHTML = '<p>No matching posts found.</p>';
+        }
+    } catch (error) {
+        console.error('Error fetching or rendering posts:', error);
+        const resultsDiv = document.getElementById('results');
+        resultsDiv.innerHTML = '<p>Failed to load posts. Please try again later.</p>';
+    }
+});
+
+
         function inferMediaType(mediaUrl) {
             if (mediaUrl.match(/\.(jpg|jpeg|png|gif)$/i)) {
                 return 'IMAGE';
@@ -171,7 +224,7 @@
             }
             return 'UNKNOWN';
         }
-    
+
         function createCarousel(children) {
             if (!children || children.length === 0) {
                 const empty = document.createElement('p');
@@ -180,26 +233,20 @@
             }
     
             const container = document.createElement('div');
-            container.style.display = 'flex';
-            container.style.overflowX = 'auto';
-            container.style.gap = '10px';
+            container.className = 'carousel';
     
             children.forEach(child => {
                 const mediaItem = document.createElement('div');
-                mediaItem.style.minWidth = '300px';
-                mediaItem.style.flexShrink = '0';
+                const mediaType = child.media_type;
     
-                if (child.media_type === 'IMAGE') {
+                if (mediaType === 'IMAGE') {
                     const img = document.createElement('img');
                     img.src = child.media_url;
-                    img.alt = 'Carousel Image';
-                    img.style.width = '100%';
                     mediaItem.appendChild(img);
-                } else if (child.media_type === 'VIDEO') {
+                } else if (mediaType === 'VIDEO') {
                     const video = document.createElement('video');
                     video.src = child.media_url;
                     video.controls = true;
-                    video.style.width = '100%';
                     mediaItem.appendChild(video);
                 }
     
@@ -209,10 +256,5 @@
             return container;
         }
     </script>
-    
-    
-    
-    
-    
 </body>
 </html>
