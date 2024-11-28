@@ -10,7 +10,7 @@ app = Flask(__name__)
 CORS(app, origins=["https://supreme-meme-7qp4794rq59f6x-5000.app.github.dev"])
 
 # Environment configuration
-ACCESS_TOKEN = 'IGQWRPQ0VfaVFwYjNrbW9xUGhmb0hnbE4ySGU0X2JXdGtCTk1RaUdLc0xjNXpqb3UtTGNqSWZApU2NCQnVXLUFHNTItZADY0RTgtcHBuUjNYbElMaHp2eGdCM3ZAfQ0c4OExfTzdxVjFoOEUtWFA0VXBvejRBOGVzaTAZD'
+ACCESS_TOKEN = ''
 USER_ID = '17841400682839492'
 INSTAGRAM_API_URL = f"https://graph.instagram.com/v21.0/{USER_ID}/media"
 
