@@ -14,7 +14,7 @@ CORS(app)
 # Environment configuration
 ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")  # Store in Railway environment variables
 USER_ID = os.getenv("USER_ID")  # Store in Railway environment variables
-GITHUB_TOKEN =  "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"  #os.getenv("GITHUB_TOKEN")  # Secure GitHub token in Railway
+GITHUB_TOKEN =  os.getenv("GITHUB_TOKEN")  # Secure GitHub token in Railway
 GITHUB_REPO = "VQUINNHILL/instagram-search"
 GITHUB_BRANCH = "main"
 GITHUB_FILE_PATH = "instagram_posts.json"
