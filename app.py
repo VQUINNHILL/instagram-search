@@ -6,6 +6,9 @@ import os
 import json
 import logging
 import base64
+from dotenv import load_dotenv
+load_dotenv()  # Load environment variables from .env
+
 
 # App setup
 app = Flask(__name__)
