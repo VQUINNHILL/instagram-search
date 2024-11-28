@@ -14,7 +14,7 @@ CORS(app)
 # Environment configuration
 ACCESS_TOKEN = 'YOUR_INSTAGRAM_ACCESS_TOKEN'
 USER_ID = 'YOUR_USER_ID'
-INDEX_FILE_PATH = "./workspaces/instagram-search/instagram_posts.json"
+INDEX_FILE_PATH = "./instagram_posts.json"
 INSTAGRAM_API_URL = f"https://graph.instagram.com/v21.0/{USER_ID}/media"
 
 # Logging setup
