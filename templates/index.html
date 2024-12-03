@@ -148,7 +148,7 @@ document.getElementById('searchForm').addEventListener('submit', async (e) => {
     const sortBy = document.getElementById('sortBy').value;
 
     try {
-        const response = await fetch('http://127.0.0.1:5000/search', {
+        const response = await fetch('https://instagram-search-production.up.railway.app/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ keyword, sort_by: sortBy }),
