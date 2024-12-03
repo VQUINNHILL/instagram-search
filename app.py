@@ -12,7 +12,7 @@ load_dotenv()  # Load environment variables from .env
 
 # App setup
 app = Flask(__name__)
-CORS(app)
+CORS(app, origins=["https://supreme-meme-7qp4794rq59f6x-5000.app.github.dev"], supports_credentials=True)
 
 # Environment configuration
 ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")  # Store in Railway environment variables
@@ -186,6 +186,12 @@ def index():
 
 @app.route('/search', methods=["POST"])
 def search():
+    if request.method == "OPTIONS":
+        # Preflight request
+        return '', 204
+    # Handle the actual POST request
+    data = request.get_json()
+    
     """Search posts in the GitHub index."""
     data = request.get_json()
     keywords = data.get("keyword", "").split()
