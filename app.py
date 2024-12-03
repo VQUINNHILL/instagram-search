@@ -28,7 +28,7 @@ def after_request(response):
 # Environment configuration
 ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")
 USER_ID = os.getenv("USER_ID")
-GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+GITHUB_PAT = os.getenv("GITHUB_PAT")
 GITHUB_REPO = "VQUINNHILL/instagram-search"
 GITHUB_BRANCH = "main"
 GITHUB_FILE_PATH = "instagram_posts.json"
@@ -45,14 +45,14 @@ CACHE = {
 
 # Helper: Validate environment variables
 def validate_env_vars():
-    if not all([ACCESS_TOKEN, USER_ID, GITHUB_TOKEN]):
-        raise EnvironmentError("Missing critical environment variables (ACCESS_TOKEN, USER_ID, GITHUB_TOKEN).")
+    if not all([ACCESS_TOKEN, USER_ID, GITHUB_PAT]):
+        raise EnvironmentError("Missing critical environment variables (ACCESS_TOKEN, USER_ID, GITHUB_PAT).")
 validate_env_vars()
 
 # GitHub Functions
 def fetch_github_file_sha():
     url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{GITHUB_FILE_PATH}"
-    headers = {"Authorization": f"token {GITHUB_TOKEN}"}
+    headers = {"Authorization": f"token {GITHUB_PAT}"}
     response = requests.get(url, headers=headers)
     if response.status_code == 200:
         return response.json().get("sha")
@@ -64,7 +64,7 @@ def fetch_github_file_sha():
 
 def save_to_github(data):
     url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{GITHUB_FILE_PATH}"
-    headers = {"Authorization": f"token {GITHUB_TOKEN}"}
+    headers = {"Authorization": f"token {GITHUB_PAT}"}
     file_sha = fetch_github_file_sha()
     payload = {
         "message": "Update Instagram index",
