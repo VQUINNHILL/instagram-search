@@ -198,6 +198,19 @@ def index():
 
 @app.route('/search', methods=["POST"])
 def search():
+    if request.method == "OPTIONS":
+        # Preflight response for CORS
+        response = jsonify({"status": "OK"})
+        response.headers.add("Access-Control-Allow-Origin", "https://supreme-meme-7qp4794rq59f6x-5000.app.github.dev")
+        response.headers.add("Access-Control-Allow-Methods", "POST, OPTIONS")
+        response.headers.add("Access-Control-Allow-Headers", "Content-Type, Authorization")
+        return response, 200
+
+    # Actual POST request handling
+    data = request.get_json()
+    keywords = data.get("keyword", "").split()
+    sort_by = data.get("sort_by", "relevance")
+
     """Search posts in the GitHub index."""
     try:
         logging.info("Received search request.")
@@ -253,7 +266,7 @@ if __name__ == '__main__':
         load_index()  # Ensure the index is loaded on startup
     except Exception as e:
         logging.warning(f"Index load failed: {e}")
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0', port=5000)
 if __name__ != '__main__':
     gunicorn_logger = logging.getLogger('gunicorn.error')
     app.logger.handlers = gunicorn_logger.handlers
