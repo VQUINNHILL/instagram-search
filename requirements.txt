@@ -8,3 +8,4 @@ torch==2.0.0  # Replace with correct PyTorch version
 torchaudio==2.0.0
 torchvision==0.15.1
 gunicorn==21.2.0
+python-dotenv
