@@ -169,11 +169,18 @@ def fetch_all_posts():
     return posts
 
 def update_instagram_index():
-    posts = fetch_all_posts()
-    if posts:
-        save_to_github(posts)
-    else:
-        logging.warning("No posts fetched from Instagram API.")
+    logging.info("Starting Instagram index update...")
+    try:
+        posts = fetch_all_posts()
+        logging.debug(f"Fetched posts: {json.dumps(posts, indent=2)}")
+        if posts:
+            save_to_github(posts)
+            logging.info("Index updated successfully.")
+        else:
+            logging.warning("No posts fetched from Instagram API.")
+    except Exception as e:
+        logging.error(f"Error during Instagram index update: {e}")
+
 
 # Flask Routes
 @app.route('/')
@@ -201,11 +208,15 @@ def search():
 
 @app.route('/update_index', methods=["GET"])
 def manual_update():
+    logging.info("Manual update endpoint triggered.")
     try:
         update_instagram_index()
+        logging.info("Index update completed successfully.")
         return jsonify({"status": "Index updated successfully"}), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        logging.error(f"Manual update failed: {e}")
+        return jsonify({"error": "Manual update failed"}), 500
+
 
 # Scheduler
 class Config:
@@ -222,4 +233,4 @@ def scheduled_update():
 scheduler.start()
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, host='127.0.0.1', port=5000)
