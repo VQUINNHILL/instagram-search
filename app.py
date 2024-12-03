@@ -83,10 +83,10 @@ def load_index():
     logging.info(f"Fetching index from GitHub: {url}")
     response = requests.get(url)
     logging.debug(f"GitHub Response Status: {response.status_code}")
-    logging.debug(f"GitHub Response Body: {response.text}")
+    #logging.debug(f"GitHub Response Body: {response.text}")
     if response.status_code == 200:
         index = response.json()
-        logging.debug(f"Loaded index from GitHub: {index}")
+        #logging.debug(f"Loaded index from GitHub: {index}")
         if not isinstance(index, list):
             raise ValueError("Invalid index format: Expected a list")
         return index
@@ -186,31 +186,29 @@ def index():
         logging.error(f"Failed to load homepage: {e}")
         return jsonify({"error": "Failed to load homepage"}), 500
 
-@app.route("/search", methods=["POST"])
+@app.route('/search', methods=["POST"])
 def search():
     """Search posts in the GitHub index."""
     try:
+        logging.info("Received search request.")
         data = request.get_json()
-        logging.debug(f"Received search data: {data}")
-
+        logging.debug(f"Request payload: {data}")
         keywords = data.get("keyword", "").split()
         sort_by = data.get("sort_by", "relevance")
-        logging.debug(f"Keywords: {keywords}, Sort By: {sort_by}")
 
         if not keywords:
+            logging.warning("No keywords provided in search.")
             return jsonify([])
 
         posts = load_index()
-        logging.debug(f"Posts from index: {posts[:5]}")  # Show first 5 for brevity
-
+        logging.debug(f"Posts loaded from index: {len(posts)} entries")
         matching_posts = filter_and_sort_posts(posts, keywords, sort_by)
-        logging.debug(f"Matching posts: {matching_posts[:5]}")  # Show first 5 for brevity
-
+        logging.info(f"Matching posts found: {len(matching_posts)}")
         return jsonify(matching_posts)
-
     except Exception as e:
-        logging.error(f"Error in search endpoint: {e}")
-        return jsonify({"error": "Internal server error"}), 500
+        logging.exception("Error processing search request.")
+        return jsonify({"error": "Search failed"}), 500
+
 
 
 @app.route('/update_index', methods=["GET"])
