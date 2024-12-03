@@ -173,7 +173,8 @@ document.getElementById('searchForm').addEventListener('submit', async (e) => {
                 const mediaContainer = document.createElement('div');
                 mediaContainer.className = 'media-container';
 
-                const mediaType = post.media_type || inferMediaType(post.media_url);
+                const mediaType = post.media_type || (post.children?.data ? 'CAROUSEL_ALBUM' : inferMediaType(post.media_url));
+
 
                 if (mediaType === 'IMAGE') {
                     const img = document.createElement('img');
@@ -191,6 +192,30 @@ document.getElementById('searchForm').addEventListener('submit', async (e) => {
                     const unknown = document.createElement('p');
                     unknown.textContent = 'Unknown media type';
                     mediaContainer.appendChild(unknown);
+                }
+
+                if (post.media_url) {
+                    if (mediaType === 'IMAGE') {
+                        const img = document.createElement('img');
+                        img.src = post.media_url;
+                        img.alt = 'Post Image';
+                        mediaContainer.appendChild(img);
+                    } else if (mediaType === 'CAROUSEL_ALBUM') {
+                        mediaContainer.appendChild(createCarousel(post.children?.data || []));
+                    } else if (mediaType === 'VIDEO') {
+                        const video = document.createElement('video');
+                        video.src = post.media_url;
+                        video.controls = true;
+                        mediaContainer.appendChild(video);
+                    } else {
+                        const unknown = document.createElement('p');
+                        unknown.textContent = 'Unknown media type';
+                        mediaContainer.appendChild(unknown);
+                    }
+                } else {
+                    const noContent = document.createElement('p');
+                    noContent.textContent = 'Media not available';
+                    mediaContainer.appendChild(noContent);
                 }
 
                 // Add caption as a clickable link
@@ -227,35 +252,42 @@ document.getElementById('searchForm').addEventListener('submit', async (e) => {
         }
 
         function createCarousel(children) {
-            if (!children || children.length === 0) {
-                const empty = document.createElement('p');
-                empty.textContent = 'No content available.';
-                return empty;
-            }
-    
-            const container = document.createElement('div');
-            container.className = 'carousel';
-    
-            children.forEach(child => {
-                const mediaItem = document.createElement('div');
-                const mediaType = child.media_type;
-    
-                if (mediaType === 'IMAGE') {
-                    const img = document.createElement('img');
-                    img.src = child.media_url;
-                    mediaItem.appendChild(img);
-                } else if (mediaType === 'VIDEO') {
-                    const video = document.createElement('video');
-                    video.src = child.media_url;
-                    video.controls = true;
-                    mediaItem.appendChild(video);
-                }
-    
-                container.appendChild(mediaItem);
-            });
-    
-            return container;
+    if (!children || children.length === 0) {
+        const empty = document.createElement('p');
+        empty.textContent = 'No content available.';
+        return empty;
+    }
+
+    const container = document.createElement('div');
+    container.className = 'carousel'; // Add CSS class for styling
+
+    children.forEach(child => {
+        const mediaItem = document.createElement('div');
+        mediaItem.style.minWidth = '300px';
+        mediaItem.style.flexShrink = '0';
+
+        if (child.media_type === 'IMAGE') {
+            const img = document.createElement('img');
+            img.src = child.media_url;
+            img.alt = 'Carousel Image';
+            mediaItem.appendChild(img);
+        } else if (child.media_type === 'VIDEO') {
+            const video = document.createElement('video');
+            video.src = child.media_url;
+            video.controls = true;
+            mediaItem.appendChild(video);
+        } else {
+            const fallback = document.createElement('p');
+            fallback.textContent = 'Unsupported media type.';
+            mediaItem.appendChild(fallback);
         }
+
+        container.appendChild(mediaItem);
+    });
+
+    return container;
+}
+
     </script>
 </body>
 </html>
