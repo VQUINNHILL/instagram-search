@@ -108,13 +108,14 @@ def fetch_all_posts():
         except requests.exceptions.RequestException as e:
             logging.error(f"Error fetching posts: {e}")
             break
-
+            logging.debug(f"Fetched posts: {posts}")
     return posts
 
 def update_instagram_index():
     """Fetch posts from Instagram API and update GitHub index."""
     logging.info("Updating Instagram index...")
     posts = fetch_all_posts()
+    logging.debug(f"Posts to be saved: {posts}")
     if posts:
         save_to_github(posts)
         logging.info("Index successfully updated.")
@@ -196,6 +197,7 @@ scheduler.init_app(app)
 @scheduler.task('interval', id='update_instagram_index', hours=24)
 def scheduled_update():
     """Scheduled update every 24 hours."""
+    logging.info("Running scheduled job to update Instagram index...")
     update_instagram_index()
 
 scheduler.start()
