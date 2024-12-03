@@ -12,13 +12,16 @@ load_dotenv()  # Load environment variables from .env
 
 # App setup
 app = Flask(__name__)
-CORS(app, origins=["https://supreme-meme-7qp4794rq59f6x-5000.app.github.dev"], supports_credentials=True)
+CORS(app, origins=["https://supreme-meme-7qp4794rq59f6x-5000.app.github.dev"])
 
 @app.after_request
-def add_cors_headers(response):
-    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+def after_request(response):
+    response.headers["Access-Control-Allow-Origin"] = "https://supreme-meme-7qp4794rq59f6x-5000.app.github.dev"
+    response.headers["Access-Control-Allow-Credentials"] = "true"
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
     return response
+
 
 
 # Environment configuration
