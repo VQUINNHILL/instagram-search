@@ -194,29 +194,7 @@ document.getElementById('searchForm').addEventListener('submit', async (e) => {
                     mediaContainer.appendChild(unknown);
                 }
 
-                if (post.media_url) {
-                    if (mediaType === 'IMAGE') {
-                        const img = document.createElement('img');
-                        img.src = post.media_url;
-                        img.alt = 'Post Image';
-                        mediaContainer.appendChild(img);
-                    } else if (mediaType === 'CAROUSEL_ALBUM') {
-                        mediaContainer.appendChild(createCarousel(post.children?.data || []));
-                    } else if (mediaType === 'VIDEO') {
-                        const video = document.createElement('video');
-                        video.src = post.media_url;
-                        video.controls = true;
-                        mediaContainer.appendChild(video);
-                    } else {
-                        const unknown = document.createElement('p');
-                        unknown.textContent = 'Unknown media type';
-                        mediaContainer.appendChild(unknown);
-                    }
-                } else {
-                    const noContent = document.createElement('p');
-                    noContent.textContent = 'Media not available';
-                    mediaContainer.appendChild(noContent);
-                }
+                
 
                 // Add caption as a clickable link
                 const caption = document.createElement('a');
