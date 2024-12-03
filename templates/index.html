@@ -65,27 +65,25 @@
             flex-direction: column;
             align-items: center;
             justify-content: flex-start;
-            width: 300px; /* Specify post width */
-            height: 400px; /* Specify post height */
+            width: 300px;
+            height: 400px;
         }
 
         .media-container {
             width: 100%;
-            height: 75%; /* Media takes 75% of the post height */
+            height: 75%;
             display: flex;
             align-items: center;
             justify-content: center;
-            background-color: #f0f0f0; /* Placeholder background */
+            background-color: #f0f0f0;
         }
 
-        /* Constrain media to the container dimensions */
         .media-container img, .media-container video {
-            max-width: 100%;  /* Fit within the container width */
-            max-height: 100%; /* Fit within the container height */
-            object-fit: cover; /* Ensure the content scales properly */
-            border-radius: 4px; /* Optional: Add rounded corners */
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: cover;
+            border-radius: 4px;
         }
-
 
         .grid-item p {
             margin: 10px;
@@ -93,20 +91,17 @@
             font-size: 14px;
             color: #333;
             text-align: center;
-            height: 25%; /* Caption takes 25% of the post height */
-            overflow: hidden; /* Prevent long captions from overflowing */
+            height: 25%;
+            overflow: hidden;
             text-overflow: ellipsis;
             display: -webkit-box;
-            -webkit-line-clamp: 3; /* Show up to 3 lines of text */
+            -webkit-line-clamp: 3;
             -webkit-box-orient: vertical;
         }
 
-        .grid-item:hover {
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        }
         .grid-item a {
-          font-size: 14px;
-           color: #0073e6;
+            font-size: 14px;
+            color: #0073e6;
             text-decoration: none;
             text-align: center;
             display: block;
@@ -114,75 +109,69 @@
         }
 
         .grid-item a:hover {
-         color: #005bb5;
+            color: #005bb5;
             text-decoration: underline;
         }
 
-        .carousel {
-            display: flex;
-            overflow-x: auto;
-            gap: 10px;
-            padding: 10px;
-        }
-
-        .carousel img, .carousel video {
-            min-width: 100%;
-            height: 100%;
-            object-fit: contain;
+        #spinner {
+            text-align: center;
+            margin: 20px 0;
+            font-size: 18px;
+            display: none;
         }
         /* Carousel Container */
-.carousel {
-    display: flex;
-    align-items: center;
-    position: relative;
-    width: 100%;
-    height: 100%;
-}
+        .carousel {
+            display: flex;
+            align-items: center;
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
 
-/* Wrapper for carousel items */
-.carousel-wrapper {
-    display: flex;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    justify-content: center;
-    align-items: center;
-    position: relative;
-}
+        /* Wrapper for carousel items */
+        .carousel-wrapper {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
 
-/* Individual carousel items */
-.carousel-item {
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: cover;
-    display: none; /* Only the active item is displayed */
-}
+        /* Individual carousel items */
+        .carousel-item {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: cover;
+            display: none; /* Only the active item is displayed */
+        }
 
-/* Navigation Arrows */
-.carousel-arrow {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    background-color: rgba(0, 0, 0, 0.5);
-    color: white;
-    border: none;
-    padding: 10px;
-    cursor: pointer;
-    z-index: 2;
-    border-radius: 50%;
-}
+        /* Navigation Arrows */
+        .carousel-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+            z-index: 2;
+            border-radius: 50%;
+        }
 
-.carousel-arrow.prev {
-    left: 10px;
-}
+        .carousel-arrow.prev {
+            left: 10px;
+        }
 
-.carousel-arrow.next {
-    right: 10px;
-}
+        .carousel-arrow.next {
+            right: 10px;
+        }
 
-.carousel-arrow:hover {
-    background-color: rgba(0, 0, 0, 0.8);
-}
+        .carousel-arrow:hover {
+            background-color: rgba(0, 0, 0, 0.8);
+        }
 
     </style>
 </head>
@@ -191,83 +180,50 @@
     <form id="searchForm">
         <input type="text" id="keyword" placeholder="Enter keyword" required>
         <select id="sortBy">
-           <option value="relevance">Sort by Relevance</option>
-           <option value="timestamp">Sort by Timestamp</option>
+            <option value="relevance">Sort by Relevance</option>
+            <option value="timestamp">Sort by Timestamp</option>
         </select>
         <button type="submit">Search</button>
     </form>
     <div id="results"></div>
+    <div id="spinner">Loading...</div>
 
     <script>
-document.getElementById('searchForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const keyword = document.getElementById('keyword').value;
-    const sortBy = document.getElementById('sortBy').value;
-    console.log(results);
-    try {
-        const response = await fetch('/search', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ keyword, sort_by: sortBy }),
-        });
+        let offset = 0;
+        const limit = 20;
+        let isLoading = false;
+        let keyword = "";
+        let sortBy = "relevance";
 
-        if (!response.ok) throw new Error('Failed to fetch posts');
+        // Fetch posts with lazy loading
+        async function fetchPosts() {
+            if (isLoading) return;
+            isLoading = true;
 
-        const results = await response.json();
-        const resultsDiv = document.getElementById('results');
-        resultsDiv.innerHTML = '';
-        
+            const spinner = document.getElementById("spinner");
+            spinner.style.display = "block";
 
-        if (results.length > 0) {
-            results.forEach(post => {
-                const div = document.createElement('div');
-                div.className = 'grid-item';
+            try {
+                const response = await fetch(`/search?limit=${limit}&offset=${offset}`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ keyword, sort_by: sortBy }),
+                });
 
-                // Create media container
-                const mediaContainer = document.createElement('div');
-                mediaContainer.className = 'media-container';
+                if (!response.ok) throw new Error("Failed to fetch posts");
 
-                // Handle media display
-                if (post.media_type === 'IMAGE' && post.media_url) {
-                    const img = document.createElement('img');
-                    img.src = post.media_url;
-                    img.alt = 'Post Image';
-                    mediaContainer.appendChild(img);
-                } else if (post.media_type === 'CAROUSEL_ALBUM' && post.children?.length) {
-                    mediaContainer.appendChild(createCarousel(post.children));
-                } else if (post.media_type === 'VIDEO' && post.media_url) {
-                    const video = document.createElement('video');
-                    video.src = post.media_url;
-                    video.controls = true;
-                    mediaContainer.appendChild(video);
-                } else {
-                    const fallback = document.createElement('p');
-                    fallback.textContent = 'No Content Available';
-                    mediaContainer.appendChild(fallback);
-                }
-
-                // Add caption as a clickable link
-                const caption = document.createElement('a');
-                caption.href = `https://www.instagram.com/p/${post.shortcode}`;
-                caption.target = '_blank';
-                caption.textContent = post.caption || 'No caption available';
-
-                div.appendChild(mediaContainer);
-                div.appendChild(caption);
-                resultsDiv.appendChild(div);
-            });
-        } else {
-            resultsDiv.innerHTML = '<p>No matching posts found.</p>';
+                const posts = await response.json();
+                offset += posts.length;
+                displayPosts(posts);
+            } catch (error) {
+                console.error("Error fetching posts:", error);
+            } finally {
+                spinner.style.display = "none";
+                isLoading = false;
+            }
         }
-    } catch (error) {
-        console.error('Error fetching or rendering posts:', error);
-        const resultsDiv = document.getElementById('results');
-        resultsDiv.innerHTML = '<p>Failed to load posts. Please try again later.</p>';
-    }
-});
 
-// Helper: Create carousel for albums
-function createCarousel(children) {
+        function createCarousel(children) {
     const container = document.createElement('div');
     container.className = 'carousel';
 
@@ -312,8 +268,65 @@ function createCarousel(children) {
     return container;
 }
 
+        // Display fetched posts
+        function displayPosts(posts) {
+            const resultsDiv = document.getElementById("results");
 
+            posts.forEach(post => {
+                const div = document.createElement("div");
+                div.className = "grid-item";
 
+                const mediaContainer = document.createElement("div");
+                mediaContainer.className = "media-container";
+
+                if (post.media_type === "IMAGE" && post.media_url) {
+                    const img = document.createElement("img");
+                    img.src = post.media_url;
+                    img.alt = "Post Image";
+                    mediaContainer.appendChild(img);
+                } else if (post.media_type === "CAROUSEL_ALBUM" && post.children?.length) {
+                    mediaContainer.appendChild(createCarousel(post.children));
+                } else if (post.media_type === "VIDEO" && post.media_url) {
+                    const video = document.createElement("video");
+                    video.src = post.media_url;
+                    video.controls = true;
+                    mediaContainer.appendChild(video);
+                } else {
+                    const fallback = document.createElement("p");
+                    fallback.textContent = "No Content Available";
+                    mediaContainer.appendChild(fallback);
+                }
+
+                const caption = document.createElement("a");
+                caption.href = `https://www.instagram.com/p/${post.shortcode}/`;
+                caption.target = "_blank";
+                caption.textContent = post.caption || "No caption available";
+
+                div.appendChild(mediaContainer);
+                div.appendChild(caption);
+                resultsDiv.appendChild(div);
+            });
+        }
+
+        // Lazy load more posts on scroll
+        window.addEventListener("scroll", () => {
+            const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
+
+            if (scrollTop + clientHeight >= scrollHeight - 10) {
+                fetchPosts();
+            }
+        });
+
+        // Initial fetch and search
+        document.getElementById("searchForm").addEventListener("submit", (e) => {
+            e.preventDefault();
+            offset = 0;
+            keyword = document.getElementById("keyword").value;
+            sortBy = document.getElementById("sortBy").value;
+
+            document.getElementById("results").innerHTML = "";
+            fetchPosts();
+        });
     </script>
 </body>
 </html>

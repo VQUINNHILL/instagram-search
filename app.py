@@ -125,13 +125,14 @@ def filter_and_sort_posts(posts, keywords, sort_by):
         for post in posts
         if post.get("caption") and any(kw in post.get("caption", "").lower() for kw in keywords)
     ]
-
+    logging.debug(f"Filtered posts before sorting: {filtered_posts}")
     # Sort posts
     if sort_by == "relevance":
         filtered_posts.sort(key=lambda x: x["relevance"], reverse=True)
     elif sort_by == "timestamp":
         filtered_posts.sort(key=lambda x: x["timestamp"], reverse=True)
 
+    logging.debug(f"Filtered and sorted posts: {filtered_posts}")
     return filtered_posts
 
 # Instagram API Functions
@@ -238,19 +239,20 @@ def index():
 @app.route('/search', methods=["POST"])
 def search():
     try:
-        data = request.get_json()
-        keywords = data.get("keyword", "").split()
-        sort_by = data.get("sort_by", "relevance")
-        if not keywords:
-            raise BadRequest("No keywords provided.")
-
+        # Load posts and filter by keywords
         posts = load_index()
+        keywords = request.json.get("keyword", "").split()
+        sort_by = request.json.get("sort_by", "relevance")
         matching_posts = filter_and_sort_posts(posts, keywords, sort_by)
-        return jsonify(matching_posts)
-    except BadRequest as e:
-        return jsonify({"error": str(e)}), 400
+
+        # Get pagination parameters
+        limit = int(request.args.get("limit", 20))  # Default 20 posts per page
+        offset = int(request.args.get("offset", 0))  # Default to first page
+        paginated_posts = matching_posts[offset:offset + limit]
+
+        return jsonify(paginated_posts)
     except Exception as e:
-        logging.exception("Error processing search request.")
+        logging.error(f"Error processing search request: {e}")
         return jsonify({"error": "Search failed"}), 500
     logging.info(f"Fetched {len(posts)} posts from Instagram.")
 
