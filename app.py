@@ -8,6 +8,7 @@ import logging
 import base64
 from dotenv import load_dotenv
 from werkzeug.exceptions import BadRequest
+from datetime import datetime
 
 # Load environment variables
 load_dotenv()
@@ -70,11 +71,14 @@ def save_to_github(data):
         "content": base64.b64encode(json.dumps(data).encode()).decode(),
         "branch": GITHUB_BRANCH,
     }
+    logging.info("Saving index to GitHub...")
     if file_sha:
         payload["sha"] = file_sha
     response = requests.put(url, headers=headers, json=payload)
-    if response.status_code not in [200, 201]:
-        raise RuntimeError(f"Failed to update file in GitHub: {response.status_code} - {response.text}")
+    if response.status_code in [200, 201]:
+        logging.info("Index successfully updated in GitHub.")
+    else:
+        logging.error(f"Failed to save index: {response.status_code} - {response.text}")
 
 def load_index():
     url = f"https://raw.githubusercontent.com/{GITHUB_REPO}/{GITHUB_BRANCH}/{GITHUB_FILE_PATH}"
@@ -131,55 +135,86 @@ def filter_and_sort_posts(posts, keywords, sort_by):
     return filtered_posts
 
 # Instagram API Functions
-def fetch_all_posts():
-    if CACHE["instagram_posts"]:
-        return CACHE["instagram_posts"]  # Return cached posts
+from datetime import datetime
+
+def fetch_posts_by_date_range(since_date, until_date=None):
+    """Fetch posts from Instagram API within a date range."""
+    since_timestamp = int(datetime.strptime(since_date, "%Y-%m-%d").timestamp())
+    until_timestamp = None
+    if until_date:
+        until_timestamp = int(datetime.strptime(until_date, "%Y-%m-%d").timestamp())
 
     url = INSTAGRAM_API_URL
     posts = []
-    while url:
-        response = requests.get(
-            url,
-            params={
+    page_limit = 100  # Max pages to fetch
+    page_count = 0
+
+    while url and page_count < page_limit:
+        try:
+            params = {
                 'fields': 'id,shortcode,caption,media_url,timestamp,media_type,children{media_type,media_url}',
                 'access_token': ACCESS_TOKEN,
-            },
-            timeout=10
-        )
-        if response.status_code != 200:
-            raise RuntimeError(f"Error fetching posts: {response.status_code} - {response.text}")
-
-        data = response.json()
-        logging.debug(f"Fetched data: {json.dumps(data, indent=2)}")  # Log full response
-
-        posts.extend([
-            {
-                "id": post.get("id"),
-                "caption": post.get("caption"),
-                "media_url": post.get("media_url"),
-                "timestamp": post.get("timestamp"),
-                "media_type": post.get("media_type"),
-                "children": post.get("children", {}).get("data", [])
+                'since': since_timestamp,
             }
-            for post in data.get("data", [])
-        ])
-        url = data.get("paging", {}).get("next")
+            if until_timestamp:
+                params['until'] = until_timestamp
 
-    CACHE["instagram_posts"] = posts  # Cache the result
+            logging.info(f"Fetching posts from {since_date} to {until_date or 'now'}...")
+            response = requests.get(url, params=params, timeout=10)
+            logging.info(f"Instagram API response status: {response.status_code}")
+            response.raise_for_status()
+
+            data = response.json()
+            logging.debug(f"Fetched data: {json.dumps(data, indent=2)}")
+
+            posts.extend(data.get("data", []))
+            url = data.get("paging", {}).get("next")  # Get next page URL
+            page_count += 1
+
+        except requests.exceptions.Timeout:
+            logging.error("Instagram API request timed out.")
+            break
+        except requests.exceptions.RequestException as e:
+            logging.error(f"Error during Instagram API request: {e}")
+            break
+
+    logging.info(f"Fetched {len(posts)} posts from {since_date} to {until_date or 'now'}.")
     return posts
 
-def update_instagram_index():
-    logging.info("Starting Instagram index update...")
+
+
+def update_instagram_index(since_date, until_date=None):
+    """Fetch and merge posts with the existing index."""
     try:
-        posts = fetch_all_posts()
-        logging.debug(f"Fetched posts: {json.dumps(posts, indent=2)}")
-        if posts:
-            save_to_github(posts)
-            logging.info("Index updated successfully.")
-        else:
-            logging.warning("No posts fetched from Instagram API.")
+        # Fetch older posts
+        older_posts = fetch_posts_by_date_range(since_date, until_date)
+        if not older_posts:
+            logging.info("No older posts fetched.")
+            return
+
+        # Load the current index
+        current_index = load_index() or []
+        logging.info(f"Current index contains {len(current_index)} posts.")
+
+        # Merge older posts into the current index (avoid duplicates by ID)
+        post_ids = {post["id"] for post in current_index}
+        new_posts = [post for post in older_posts if post["id"] not in post_ids]
+        updated_index = current_index + new_posts
+
+        # Save the updated index
+        save_to_github(updated_index)
+        logging.info(f"Index successfully updated with {len(new_posts)} new posts.")
     except Exception as e:
-        logging.error(f"Error during Instagram index update: {e}")
+        logging.error(f"Error updating Instagram index: {e}")
+
+def fetch_historical_posts():
+    """Fetch posts year-by-year since 2020."""
+    for year in range(2020, 2024):  # Adjust as needed
+        since_date = f"{year}-01-01"
+        until_date = f"{year + 1}-01-01"
+        logging.info(f"Fetching posts for {year}...")
+        update_instagram_index(since_date, until_date)
+
 
 
 # Flask Routes
@@ -208,14 +243,17 @@ def search():
 
 @app.route('/update_index', methods=["GET"])
 def manual_update():
-    logging.info("Manual update endpoint triggered.")
+    since_date = request.args.get('since', '2020-01-01')  # Default to January 1, 2020
+    until_date = request.args.get('until')  # Optional end date
+    logging.info(f"Manual update triggered for posts since {since_date} to {until_date or 'now'}.")
+
     try:
-        update_instagram_index()
-        logging.info("Index update completed successfully.")
+        update_instagram_index(since_date, until_date)
         return jsonify({"status": "Index updated successfully"}), 200
     except Exception as e:
         logging.error(f"Manual update failed: {e}")
         return jsonify({"error": "Manual update failed"}), 500
+
 
 
 # Scheduler
