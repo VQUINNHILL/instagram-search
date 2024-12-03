@@ -25,7 +25,14 @@ GITHUB_FILE_PATH = "instagram_posts.json"
 INSTAGRAM_API_URL = f"https://graph.instagram.com/v21.0/{USER_ID}/media"
 
 # Logging setup
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(
+    level=logging.DEBUG,
+    handlers=[logging.StreamHandler()],
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
+logging.getLogger("urllib3").setLevel(logging.DEBUG)
+logging.getLogger("apscheduler").setLevel(logging.DEBUG)
+
 
 # GitHub Functions
 def fetch_github_file_sha():
@@ -43,6 +50,7 @@ def fetch_github_file_sha():
         raise Exception("Error fetching file SHA")
 
 def save_to_github(data):
+    logging.debug("Starting GitHub save process.")
     """Save the updated index to GitHub."""
     url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{GITHUB_FILE_PATH}"
     headers = {"Authorization": f"token {GITHUB_TOKEN}"}
@@ -53,23 +61,36 @@ def save_to_github(data):
         "content": base64.b64encode(json.dumps(data).encode()).decode(),
         "branch": GITHUB_BRANCH,
     }
-
+    logging.debug(f"Data being saved to GitHub: {data}")
     if file_sha:
         payload["sha"] = file_sha  # Required for updates
-
+        logging.debug(f"File SHA found: {file_sha}")
+    else:
+        logging.info("No existing file SHA found; creating a new file.")
+    logging.debug(f"GitHub API Payload: {payload}")
     response = requests.put(url, headers=headers, json=payload)
+    logging.debug(f"GitHub Response: {response.status_code} - {response.text}")
     if response.status_code in [200, 201]:
         logging.info("Index successfully updated in GitHub repository.")
     else:
         logging.error(f"Failed to update file in GitHub: {response.status_code} - {response.text}")
         raise Exception("Error saving file to GitHub")
+    
 
 def load_index():
     """Load the index from the GitHub repository."""
     url = f"https://raw.githubusercontent.com/{GITHUB_REPO}/{GITHUB_BRANCH}/{GITHUB_FILE_PATH}"
     logging.info(f"Fetching index from GitHub: {url}")
     response = requests.get(url)
-    logging.info(f"GitHub response: {response.status_code} - {response.text[:200]}")  # Log a preview of the response
+    logging.debug(f"GitHub Response Status: {response.status_code}")
+    logging.debug(f"GitHub Response Body: {response.text}")
+    if response.status_code == 200:
+        index = response.json()
+        logging.debug(f"Loaded index from GitHub: {index}")
+        return index
+    else:
+        logging.error(f"Failed to fetch index from GitHub: {response.status_code} - {response.text}")
+
     if response.status_code == 200:
         try:
             return response.json()  # Attempt to parse the response
@@ -91,6 +112,7 @@ def fetch_all_posts():
 
     while url and page_count < page_limit:
         try:
+            logging.debug(f"Fetching posts from URL: {url}")
             response = requests.get(
                 url,
                 params={
@@ -99,16 +121,20 @@ def fetch_all_posts():
                 },
                 timeout=10
             )
+            logging.debug(f"Response Status Code: {response.status_code}")
+            logging.debug(f"Response Body: {response.json()}")
+
             response.raise_for_status()
 
             data = response.json()
             posts.extend(data.get('data', []))
             url = data.get('paging', {}).get('next')
+            logging.debug(f"Fetched {len(posts)} posts so far.")
             page_count += 1
         except requests.exceptions.RequestException as e:
             logging.error(f"Error fetching posts: {e}")
             break
-            logging.debug(f"Fetched posts: {posts}")
+    logging.debug(f"Total posts fetched: {len(posts)}")
     return posts
 
 def update_instagram_index():
@@ -209,3 +235,7 @@ if __name__ == '__main__':
     except Exception as e:
         logging.warning(f"Index load failed: {e}")
     app.run(debug=True)
+if __name__ != '__main__':
+    gunicorn_logger = logging.getLogger('gunicorn.error')
+    app.logger.handlers = gunicorn_logger.handlers
+    app.logger.setLevel(gunicorn_logger.level)
