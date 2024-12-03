@@ -8,7 +8,7 @@ import logging
 import base64
 from dotenv import load_dotenv
 from werkzeug.exceptions import BadRequest
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Load environment variables
 load_dotenv()
@@ -181,7 +181,25 @@ def fetch_posts_by_date_range(since_date, until_date=None):
     logging.info(f"Fetched {len(posts)} posts from {since_date} to {until_date or 'now'}.")
     return posts
 
+def fetch_historical_posts():
+    """Fetch and index historical posts year-by-year since January 1, 2020."""
+    start_date = datetime(2020, 1, 1)  # Starting point
+    end_date = datetime.now()  # Fetch up to the current date
+    interval = timedelta(days=365)  # Fetch one year at a time
 
+    current_date = start_date
+    while current_date < end_date:
+        since_date = current_date.strftime("%Y-%m-%d")
+        until_date = (current_date + interval).strftime("%Y-%m-%d")
+        logging.info(f"Fetching posts from {since_date} to {until_date}...")
+
+        try:
+            update_instagram_index(since_date, until_date)
+            logging.info(f"Successfully indexed posts from {since_date} to {until_date}.")
+        except Exception as e:
+            logging.error(f"Failed to index posts from {since_date} to {until_date}: {e}")
+        
+        current_date += interval  # Move to the next period
 
 def update_instagram_index(since_date, until_date=None):
     """Fetch and merge posts with the existing index."""
@@ -207,13 +225,7 @@ def update_instagram_index(since_date, until_date=None):
     except Exception as e:
         logging.error(f"Error updating Instagram index: {e}")
 
-def fetch_historical_posts():
-    """Fetch posts year-by-year since 2020."""
-    for year in range(2020, 2024):  # Adjust as needed
-        since_date = f"{year}-01-01"
-        until_date = f"{year + 1}-01-01"
-        logging.info(f"Fetching posts for {year}...")
-        update_instagram_index(since_date, until_date)
+
 
 
 
@@ -240,6 +252,7 @@ def search():
     except Exception as e:
         logging.exception("Error processing search request.")
         return jsonify({"error": "Search failed"}), 500
+    logging.info(f"Fetched {len(posts)} posts from Instagram.")
 
 @app.route('/update_index', methods=["GET"])
 def manual_update():
@@ -253,6 +266,23 @@ def manual_update():
     except Exception as e:
         logging.error(f"Manual update failed: {e}")
         return jsonify({"error": "Manual update failed"}), 500
+    logging.info(f"Saving {len(updated_index)} posts to GitHub.")
+
+    
+@app.route('/fetch_historical_posts', methods=["GET"])
+def fetch_historical_posts_route():
+    """Trigger historical post fetching."""
+    logging.info("Historical post fetch triggered.")
+    try:
+        fetch_historical_posts()
+        return jsonify({"status": "Historical posts indexed successfully."}), 200
+    except Exception as e:
+        logging.error(f"Failed to fetch historical posts: {e}")
+        return jsonify({"error": "Failed to fetch historical posts."}), 500
+
+current_index = load_index() or []
+logging.info(f"Current index contains {len(current_index)} posts.")
+
 
 
 
