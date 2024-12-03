@@ -87,6 +87,8 @@ def load_index():
     if response.status_code == 200:
         index = response.json()
         logging.debug(f"Loaded index from GitHub: {index}")
+        if not isinstance(index, list):
+            raise ValueError("Invalid index format: Expected a list")
         return index
     else:
         logging.error(f"Failed to fetch index from GitHub: {response.status_code} - {response.text}")
@@ -184,29 +186,32 @@ def index():
         logging.error(f"Failed to load homepage: {e}")
         return jsonify({"error": "Failed to load homepage"}), 500
 
-@app.route('/search', methods=["POST"])
+@app.route("/search", methods=["POST"])
 def search():
-    if request.method == "OPTIONS":
-        # Preflight request
-        return '', 204
-    # Handle the actual POST request
-    data = request.get_json()
-    
     """Search posts in the GitHub index."""
-    data = request.get_json()
-    keywords = data.get("keyword", "").split()
-    sort_by = data.get("sort_by", "relevance")
-
-    if not keywords:
-        return jsonify([])
-
     try:
+        data = request.get_json()
+        logging.debug(f"Received search data: {data}")
+
+        keywords = data.get("keyword", "").split()
+        sort_by = data.get("sort_by", "relevance")
+        logging.debug(f"Keywords: {keywords}, Sort By: {sort_by}")
+
+        if not keywords:
+            return jsonify([])
+
         posts = load_index()
+        logging.debug(f"Posts from index: {posts[:5]}")  # Show first 5 for brevity
+
         matching_posts = filter_and_sort_posts(posts, keywords, sort_by)
+        logging.debug(f"Matching posts: {matching_posts[:5]}")  # Show first 5 for brevity
+
         return jsonify(matching_posts)
+
     except Exception as e:
-        logging.error(f"Error searching posts: {e}")
-        return jsonify({"error": "Search failed"}), 500
+        logging.error(f"Error in search endpoint: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
 
 @app.route('/update_index', methods=["GET"])
 def manual_update():
