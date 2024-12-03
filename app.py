@@ -14,6 +14,13 @@ load_dotenv()  # Load environment variables from .env
 app = Flask(__name__)
 CORS(app, origins=["https://supreme-meme-7qp4794rq59f6x-5000.app.github.dev"], supports_credentials=True)
 
+@app.after_request
+def add_cors_headers(response):
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    return response
+
+
 # Environment configuration
 ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")  # Store in Railway environment variables
 USER_ID = os.getenv("USER_ID")  # Store in Railway environment variables
