@@ -21,12 +21,13 @@ from flask import redirect
 def _fetch_media_node(media_id: str):
     """Get a fresh media node from Instagram (media_url/thumbnail/children)."""
     params = {
-        "fields": "id,media_type,media_url,thumbnail_url,children{media_type,media_url,id}",
+        "fields": "id,media_type,media_url,thumbnail_url,children{media_type,media_url,thumbnail_url,id}",
         "access_token": ACCESS_TOKEN,
     }
     r = requests.get(f"https://graph.instagram.com/v21.0/{media_id}", params=params, timeout=10)
     r.raise_for_status()
     return r.json()
+
 
 @app.route("/media_url/<media_id>")
 def media_url_resolver(media_id):
@@ -54,11 +55,21 @@ def media_children(media_id):
     try:
         node = _fetch_media_node(media_id)
         children = node.get("children", {}).get("data", [])
-        # children already include media_type/media_url/id in the fields we requested
-        return jsonify(children)
+        normalized = []
+        for c in children:
+            display_url = c.get("thumbnail_url") if c.get("media_type") == "VIDEO" else c.get("media_url")
+            normalized.append({
+                "id": c.get("id"),
+                "media_type": c.get("media_type"),
+                "media_url": c.get("media_url"),
+                "thumbnail_url": c.get("thumbnail_url"),
+                "display_url": display_url
+            })
+        return jsonify(normalized)
     except Exception as e:
         logging.error(f"/media_children error for {media_id}: {e}")
         return jsonify({"error": "Failed to resolve children"}), 500
+
 
 
 # --- CORS via env var ---
