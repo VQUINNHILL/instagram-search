@@ -16,6 +16,51 @@ load_dotenv()
 # Flask app setup
 app = Flask(__name__)
 
+from flask import redirect
+
+def _fetch_media_node(media_id: str):
+    """Get a fresh media node from Instagram (media_url/thumbnail/children)."""
+    params = {
+        "fields": "id,media_type,media_url,thumbnail_url,children{media_type,media_url,id}",
+        "access_token": ACCESS_TOKEN,
+    }
+    r = requests.get(f"https://graph.instagram.com/v21.0/{media_id}", params=params, timeout=10)
+    r.raise_for_status()
+    return r.json()
+
+@app.route("/media_url/<media_id>")
+def media_url_resolver(media_id):
+    """
+    Redirect to a fresh media_url. If ?thumb=1 and the item is VIDEO, prefer thumbnail_url.
+    Use <img src="/media_url/<id>?thumb=1"> for thumbnails,
+    or <video src="/media_url/<id>"> for playback.
+    """
+    try:
+        node = _fetch_media_node(media_id)
+        mt = node.get("media_type")
+        url = node.get("media_url")
+        if request.args.get("thumb") == "1" and mt == "VIDEO":
+            url = node.get("thumbnail_url") or url
+        if not url:
+            return jsonify({"error": "No media_url available"}), 404
+        return redirect(url, code=302)
+    except Exception as e:
+        logging.error(f"/media_url error for {media_id}: {e}")
+        return jsonify({"error": "Failed to resolve media_url"}), 500
+
+@app.route("/media_children/<media_id>")
+def media_children(media_id):
+    """Return fresh children (for carousels) with non-expired media_url values."""
+    try:
+        node = _fetch_media_node(media_id)
+        children = node.get("children", {}).get("data", [])
+        # children already include media_type/media_url/id in the fields we requested
+        return jsonify(children)
+    except Exception as e:
+        logging.error(f"/media_children error for {media_id}: {e}")
+        return jsonify({"error": "Failed to resolve children"}), 500
+
+
 # --- CORS via env var ---
 ALLOWED_ORIGIN = os.getenv("ALLOWED_ORIGIN", "*")  # set to your frontend origin in prod
 CORS(app, origins=[ALLOWED_ORIGIN] if ALLOWED_ORIGIN != "*" else "*")
