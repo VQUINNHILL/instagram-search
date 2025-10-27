@@ -15,11 +15,14 @@ load_dotenv()
 
 # Flask app setup
 app = Flask(__name__)
-CORS(app, origins=["https://supreme-meme-7qp4794rq59f6x-5000.app.github.dev"])
+
+# --- CORS via env var ---
+ALLOWED_ORIGIN = os.getenv("ALLOWED_ORIGIN", "*")  # set to your frontend origin in prod
+CORS(app, origins=[ALLOWED_ORIGIN] if ALLOWED_ORIGIN != "*" else "*")
 
 @app.after_request
 def after_request(response):
-    response.headers["Access-Control-Allow-Origin"] = "https://supreme-meme-7qp4794rq59f6x-5000.app.github.dev"
+    response.headers["Access-Control-Allow-Origin"] = ALLOWED_ORIGIN if ALLOWED_ORIGIN != "*" else "*"
     response.headers["Access-Control-Allow-Credentials"] = "true"
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
     response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
@@ -99,18 +102,9 @@ def load_index():
 def filter_and_sort_posts(posts, keywords, sort_by):
     """
     Filter posts by keywords and sort them by the specified criteria.
-
-    Args:
-        posts (list): List of posts from the index.
-        keywords (list): List of keywords to filter posts.
-        sort_by (str): Sorting criteria ('relevance' or 'timestamp').
-
-    Returns:
-        list: Filtered and sorted list of posts.
     """
-    keywords = [kw.lower() for kw in keywords]  # Normalize keywords to lowercase
+    keywords = [kw.lower() for kw in keywords]
 
-    # Filter posts containing any keyword
     filtered_posts = [
         {
             "id": post.get("id"),
@@ -126,7 +120,7 @@ def filter_and_sort_posts(posts, keywords, sort_by):
         if post.get("caption") and any(kw in post.get("caption", "").lower() for kw in keywords)
     ]
     logging.debug(f"Filtered posts before sorting: {filtered_posts}")
-    # Sort posts
+
     if sort_by == "relevance":
         filtered_posts.sort(key=lambda x: x["relevance"], reverse=True)
     elif sort_by == "timestamp":
@@ -136,7 +130,7 @@ def filter_and_sort_posts(posts, keywords, sort_by):
     return filtered_posts
 
 # Instagram API Functions
-from datetime import datetime
+from datetime import datetime  # (kept as in your original file)
 
 def fetch_posts_by_date_range(since_date, until_date=None):
     """Fetch posts from Instagram API within a date range."""
@@ -147,7 +141,7 @@ def fetch_posts_by_date_range(since_date, until_date=None):
 
     url = INSTAGRAM_API_URL
     posts = []
-    page_limit = 100  # Max pages to fetch
+    page_limit = 100
     page_count = 0
 
     while url and page_count < page_limit:
@@ -169,7 +163,7 @@ def fetch_posts_by_date_range(since_date, until_date=None):
             logging.debug(f"Fetched data: {json.dumps(data, indent=2)}")
 
             posts.extend(data.get("data", []))
-            url = data.get("paging", {}).get("next")  # Get next page URL
+            url = data.get("paging", {}).get("next")
             page_count += 1
 
         except requests.exceptions.Timeout:
@@ -184,9 +178,9 @@ def fetch_posts_by_date_range(since_date, until_date=None):
 
 def fetch_historical_posts():
     """Fetch and index historical posts year-by-year since January 1, 2020."""
-    start_date = datetime(2020, 1, 1)  # Starting point
-    end_date = datetime.now()  # Fetch up to the current date
-    interval = timedelta(days=365)  # Fetch one year at a time
+    start_date = datetime(2020, 1, 1)
+    end_date = datetime.now()
+    interval = timedelta(days=365)
 
     current_date = start_date
     while current_date < end_date:
@@ -195,40 +189,33 @@ def fetch_historical_posts():
         logging.info(f"Fetching posts from {since_date} to {until_date}...")
 
         try:
-            update_instagram_index(since_date, until_date)
+            update_instagram_index_for_range(since_date, until_date)
             logging.info(f"Successfully indexed posts from {since_date} to {until_date}.")
         except Exception as e:
             logging.error(f"Failed to index posts from {since_date} to {until_date}: {e}")
         
-        current_date += interval  # Move to the next period
+        current_date += interval
 
-def update_instagram_index(since_date, until_date=None):
+# --- wrapper used by scheduler & manual routes ---
+def update_instagram_index_for_range(since_date, until_date=None):
     """Fetch and merge posts with the existing index."""
     try:
-        # Fetch older posts
         older_posts = fetch_posts_by_date_range(since_date, until_date)
         if not older_posts:
             logging.info("No older posts fetched.")
             return
 
-        # Load the current index
         current_index = load_index() or []
         logging.info(f"Current index contains {len(current_index)} posts.")
 
-        # Merge older posts into the current index (avoid duplicates by ID)
         post_ids = {post["id"] for post in current_index}
         new_posts = [post for post in older_posts if post["id"] not in post_ids]
         updated_index = current_index + new_posts
 
-        # Save the updated index
         save_to_github(updated_index)
         logging.info(f"Index successfully updated with {len(new_posts)} new posts.")
     except Exception as e:
         logging.error(f"Error updating Instagram index: {e}")
-
-
-
-
 
 # Flask Routes
 @app.route('/')
@@ -239,38 +226,34 @@ def index():
 @app.route('/search', methods=["POST"])
 def search():
     try:
-        # Load posts and filter by keywords
         posts = load_index()
         keywords = request.json.get("keyword", "").split()
         sort_by = request.json.get("sort_by", "relevance")
         matching_posts = filter_and_sort_posts(posts, keywords, sort_by)
 
-        # Get pagination parameters
-        limit = int(request.args.get("limit", 20))  # Default 20 posts per page
-        offset = int(request.args.get("offset", 0))  # Default to first page
+        # Pagination
+        limit = int(request.args.get("limit", 20))
+        offset = int(request.args.get("offset", 0))
         paginated_posts = matching_posts[offset:offset + limit]
 
         return jsonify(paginated_posts)
     except Exception as e:
         logging.error(f"Error processing search request: {e}")
         return jsonify({"error": "Search failed"}), 500
-    logging.info(f"Fetched {len(posts)} posts from Instagram.")
 
 @app.route('/update_index', methods=["GET"])
 def manual_update():
-    since_date = request.args.get('since', '2020-01-01')  # Default to January 1, 2020
-    until_date = request.args.get('until')  # Optional end date
+    since_date = request.args.get('since', '2020-01-01')
+    until_date = request.args.get('until')
     logging.info(f"Manual update triggered for posts since {since_date} to {until_date or 'now'}.")
 
     try:
-        update_instagram_index(since_date, until_date)
+        update_instagram_index_for_range(since_date, until_date)
         return jsonify({"status": "Index updated successfully"}), 200
     except Exception as e:
         logging.error(f"Manual update failed: {e}")
         return jsonify({"error": "Manual update failed"}), 500
-    logging.info(f"Saving {len(updated_index)} posts to GitHub.")
 
-    
 @app.route('/fetch_historical_posts', methods=["GET"])
 def fetch_historical_posts_route():
     """Trigger historical post fetching."""
@@ -285,9 +268,6 @@ def fetch_historical_posts_route():
 current_index = load_index() or []
 logging.info(f"Current index contains {len(current_index)} posts.")
 
-
-
-
 # Scheduler
 class Config:
     SCHEDULER_API_ENABLED = True
@@ -298,7 +278,9 @@ scheduler.init_app(app)
 
 @scheduler.task('interval', id='update_instagram_index', hours=24)
 def scheduled_update():
-    update_instagram_index()
+    # Example: refresh the last 30 days every 24 hours
+    since = (datetime.utcnow() - timedelta(days=30)).strftime("%Y-%m-%d")
+    update_instagram_index_for_range(since)
 
 scheduler.start()
 
