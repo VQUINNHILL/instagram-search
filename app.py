@@ -28,6 +28,38 @@ def _fetch_media_node(media_id: str):
     r.raise_for_status()
     return r.json()
 
+from collections import Counter
+
+@app.route("/index_status")
+def index_status():
+    """Quick stats to confirm the index is fresh and has what we need."""
+    try:
+        idx = load_index() or []
+        n = len(idx)
+        newest = max((p.get("timestamp") for p in idx if p.get("timestamp")), default="n/a")
+        types = Counter(p.get("media_type") for p in idx)
+        sample_carousel = next((p for p in idx if p.get("media_type") == "CAROUSEL_ALBUM"), None)
+        return jsonify({
+            "count": n,
+            "newest_timestamp": newest,
+            "media_type_counts": types,
+            "sample_carousel_id": sample_carousel.get("id") if sample_carousel else None
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/rebuild_recent")
+def rebuild_recent():
+    """Force a refresh for the last N days, default 60."""
+    days = int(request.args.get("days", 60))
+    since = (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%d")
+    try:
+        update_instagram_index_for_range(since)
+        return jsonify({"status": "ok", "since": since})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 
 @app.route("/media_url/<media_id>")
 def media_url_resolver(media_id):
@@ -203,7 +235,7 @@ def fetch_posts_by_date_range(since_date, until_date=None):
     while url and page_count < page_limit:
         try:
             params = {
-                'fields': 'id,shortcode,caption,media_url,timestamp,media_type,children{media_type,media_url}',
+                'fields': 'id,caption,media_type,media_url,permalink,timestamp,children{media_type,media_url,thumbnail_url,id}',
                 'access_token': ACCESS_TOKEN,
                 'since': since_timestamp,
             }
