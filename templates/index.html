@@ -194,6 +194,7 @@
         let isLoading = false;
         let keyword = "";
         let sortBy = "relevance";
+        const BACKEND = 'https://instagram-search-production.up.railway.app'; // your deployed API
 
         // Fetch posts with lazy loading
         async function fetchPosts() {
@@ -279,28 +280,76 @@
                 const mediaContainer = document.createElement("div");
                 mediaContainer.className = "media-container";
 
-                if (post.media_type === "IMAGE" && post.media_url) {
-                    const img = document.createElement("img");
-                    img.src = post.media_url;
-                    img.alt = "Post Image";
-                    mediaContainer.appendChild(img);
-                } else if (post.media_type === "CAROUSEL_ALBUM" && post.children?.length) {
-                    mediaContainer.appendChild(createCarousel(post.children));
-                } else if (post.media_type === "VIDEO" && post.media_url) {
-                    const video = document.createElement("video");
-                    video.src = post.media_url;
-                    video.controls = true;
-                    mediaContainer.appendChild(video);
+                const mediaType = post.media_type || inferMediaType(post.media_url);
+                
+                // IMAGE
+                if (mediaType === 'IMAGE') {
+                  const img = document.createElement('img');
+                  // always go through backend so you get a fresh URL
+                  img.src = `${BACKEND}/media_url/${post.id}`;
+                  img.alt = 'Post Image';
+                  mediaContainer.appendChild(img);
+                
+                // CAROUSEL
+                } else if (mediaType === 'CAROUSEL_ALBUM') {
+                  const container = document.createElement('div');
+                  container.className = 'carousel';
+                
+                  fetch(`${BACKEND}/media_children/${post.id}`)
+                    .then(r => r.json())
+                    .then(children => {
+                      if (!children || !children.length) {
+                        const p = document.createElement('p');
+                        p.textContent = 'No content available.';
+                        container.appendChild(p);
+                        return;
+                      }
+                      children.forEach(child => {
+                        if (child.media_type === 'IMAGE') {
+                          const img = document.createElement('img');
+                          img.src = child.media_url; // fresh from backend
+                          img.alt = 'Carousel Image';
+                          container.appendChild(img);
+                        } else if (child.media_type === 'VIDEO') {
+                          // show a thumbnail in the grid; swap to video on click if you want
+                          const thumb = document.createElement('img');
+                          thumb.src = `${BACKEND}/media_url/${child.id}?thumb=1`;
+                          thumb.alt = 'Carousel Video';
+                          container.appendChild(thumb);
+                        }
+                      });
+                    })
+                    .catch(() => {
+                      const p = document.createElement('p');
+                      p.textContent = 'No content available.';
+                      container.appendChild(p);
+                    });
+                
+                  mediaContainer.appendChild(container);
+                
+                // VIDEO
+                } else if (mediaType === 'VIDEO') {
+                  // show a lightweight thumbnail in the grid
+                  const img = document.createElement('img');
+                  img.src = `${BACKEND}/media_url/${post.id}?thumb=1`;
+                  img.alt = 'Video Thumbnail';
+                  mediaContainer.appendChild(img);
+                
                 } else {
-                    const fallback = document.createElement("p");
-                    fallback.textContent = "No Content Available";
-                    mediaContainer.appendChild(fallback);
+                  const unknown = document.createElement('p');
+                  unknown.textContent = 'Unknown media type';
+                  mediaContainer.appendChild(unknown);
                 }
 
-                const caption = document.createElement("a");
-                caption.href = `https://www.instagram.com/p/${post.shortcode}/`;
-                caption.target = "_blank";
-                caption.textContent = post.caption || "No caption available";
+
+                const caption = document.createElement('a');
+                const shortcode = post.shortcode;
+                caption.href = shortcode
+                  ? `https://www.instagram.com/p/${shortcode}`
+                  : `https://www.instagram.com/`; // fallback
+                caption.target = '_blank';
+                caption.textContent = post.caption || 'No caption available';
+
 
                 div.appendChild(mediaContainer);
                 div.appendChild(caption);
