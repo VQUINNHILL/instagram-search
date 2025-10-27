@@ -194,7 +194,7 @@
         let isLoading = false;
         let keyword = "";
         let sortBy = "relevance";
-        const BACKEND = window.location.origin; // always hit the same host that served this page
+        const BACKEND = 'https://instagram-search-production.up.railway.app';
 
 
         // Fetch posts with lazy loading
@@ -374,10 +374,7 @@
 
 
                 const caption = document.createElement('a');
-                const shortcode = post.shortcode;
-                caption.href = shortcode
-                  ? `https://www.instagram.com/p/${shortcode}`
-                  : `https://www.instagram.com/`; // fallback
+                caption.href = post.permalink || 'https://www.instagram.com/';
                 caption.target = '_blank';
                 caption.textContent = post.caption || 'No caption available';
 
