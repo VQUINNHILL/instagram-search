@@ -2,10 +2,5 @@ Flask==3.1.0
 flask-apscheduler
 flask-cors==3.0.10
 requests==2.32.3
-numpy==2.1.1
-pandas==2.2.3
-torch==2.0.0  # Replace with correct PyTorch version
-torchaudio==2.0.0
-torchvision==0.15.1
 gunicorn==21.2.0
 python-dotenv
